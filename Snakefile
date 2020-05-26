@@ -28,7 +28,7 @@ rule bwa_build:
     shell:
         """
         gzip -d mm10.fa.gz
-        bwa mem index {input} -p genome/mm10
+        bwa index {input} -p genome/mm10
         """
 
 rule download_attach:
@@ -41,29 +41,30 @@ rule download_attach:
     input:
         expand("replicates/{rep}.txt", rep=IDS)
     output:
-        "fastq/{wildcards.rep}/done.txt"
+        "fastq/{{rep}}.done"
     threads: 8
     shell:
         """
-        mkdir fastq
-        cd fastq
-        wget -i {input}
+        mkdir tmp
+        wget -i {input} -P ./tmp
+        cd tmp
         gzip -S .gz.1 -d *
         sinto barcode -b 12 --barcode_fastq *R1_001.fastq --read1 *R2_001.fastq --read2 *R3_001.fastq --prefix {{rep}}_
-        pigz -p {threads} *.fastq
-        touch done.txt
+        mv *.barcoded.fastq ../fastq
+        rm *.fastq
+        touch ../fastq/{{rep}}.done
         """
 
 rule cat_fastq:
     """Concatenate fastq files from different reps"""
     input:
-        "fastq/{wildcards.rep}/done.txt"
+        "fastq/{wildcards.rep}.done"
     output:
         "fastq/read1.fastq.gz"
     shell:
         """
-        cat fastq/{{rep}}/*R2_001.barcoded.fastq.gz > fastq/read1.fastq.gz
-        cat fastq/{{rep}}/*R3_001.barcoded.fastq.gz > fastq/read2.fastq.gz
+        cat fastq/*R2_001.barcoded.fastq.gz > fastq/read1.fastq.gz
+        cat fastq/*R3_001.barcoded.fastq.gz > fastq/read2.fastq.gz
         """
 
 rule map_reads:
@@ -104,7 +105,7 @@ rule create_fragments:
     threads: 8
     shell:
         """
-        sinto fragments -b mapped/aln.bam -p {threads} -f {output} --barcode_regex "[^:]*"
+        sinto fragments -b mapped/aln.sort.bam -p {threads} -f {output} --barcode_regex "[^:]*"
         """
 
 rule sort_fragments:
