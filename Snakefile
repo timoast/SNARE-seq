@@ -27,6 +27,7 @@ rule bwa_build:
         "genome/mm10.fa"
     shell:
         """
+        cd genome
         gzip -d mm10.fa.gz
         bwa index {input} -p genome/mm10
         """
@@ -39,26 +40,23 @@ rule download_attach:
     Compress fastqs (parallel using pigz)
     """
     input:
-        expand("replicates/{rep}.txt", rep=IDS)
+        file = expand("replicates/{rep}.txt", rep=IDS)
     output:
-        "fastq/{{rep}}.done"
-    threads: 8
+        dir = directory(expand("fastq/{rep}", rep=IDS))
+    threads: 1
     shell:
         """
-        mkdir tmp
-        wget -i {input} -P ./tmp
-        cd tmp
+        mkdir {output}
+        wget -i {input.file} -P {output}
+        cd {output}
         gzip -S .gz.1 -d *
         sinto barcode -b 12 --barcode_fastq *R1_001.fastq --read1 *R2_001.fastq --read2 *R3_001.fastq --prefix {{rep}}_
-        mv *.barcoded.fastq ../fastq
-        rm *.fastq
-        touch ../fastq/{{rep}}.done
         """
 
 rule cat_fastq:
     """Concatenate fastq files from different reps"""
     input:
-        "fastq/{wildcards.rep}.done"
+        rules.download_attach.output.dir
     output:
         "fastq/read1.fastq.gz"
     shell:
