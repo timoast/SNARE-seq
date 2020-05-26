@@ -30,7 +30,7 @@ rule bwa_build:
     shell:
         """
         gzip -d genome/mm10.fa.gz
-        bwa index {input}
+        bwa index genome/mm10.fa
         """
 
 rule download_attach:
