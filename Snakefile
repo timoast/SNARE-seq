@@ -27,9 +27,8 @@ rule bwa_build:
         "genome/mm10.fa"
     shell:
         """
-        cd genome
-        gzip -d mm10.fa.gz
-        bwa index {input} -p genome/mm10
+        gzip -d genome/mm10.fa.gz
+        bwa index {input}
         """
 
 rule download_attach:
@@ -75,7 +74,7 @@ rule map_reads:
     threads: 8
     shell:
         """
-        bwa mem -t {threads} genome/mm10 fastq/read1.barcoded.fastq.gz fastq/read2.barcoded.fastq.gz \
+        bwa mem -t {threads} genome/mm10.fa fastq/read1.barcoded.fastq.gz fastq/read2.barcoded.fastq.gz \
             | samtools view -b - > {output}
         """
 
