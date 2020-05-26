@@ -31,3 +31,7 @@ To run the pipeline and generate the outputs, run:
 ```
 snakemake --cores 8
 ```
+
+Overview of the pipeline:
+
+![](./dag.png)
