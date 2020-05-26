@@ -60,7 +60,7 @@ rule cat_fastq:
     input:
         expand("fastq/{rep}/done.txt", rep=IND)
     output:
-        "fastq/read1.fastq.gz"
+        "fastq/read1.fastq"
     threads: 1
     shell:
         """
@@ -72,14 +72,14 @@ rule cat_fastq:
 rule map_reads:
     """Map reads to genome"""
     input:
-        "fastq/read1.fastq.gz",
+        "fastq/read1.fastq",
         "genome/mm10.fa"
     output:
         "mapped/aln.bam"
     threads: 8
     shell:
         """
-        bwa mem -t {threads} genome/mm10.fa fastq/read1.barcoded.fastq.gz fastq/read2.barcoded.fastq.gz \
+        bwa mem -t {threads} genome/mm10.fa fastq/read1.barcoded.fastq fastq/read2.barcoded.fastq \
             | samtools view -b - > {output}
         """
 
