@@ -45,13 +45,14 @@ rule download_attach:
     threads: 1
     shell:
         """
-        mkdir {output}
-        wget -i {input} -P {output}
-        cd {output}
+        wget -i {input} -P fastq/{wildcards.rep}
+        cd fastq/{wildcards.rep}
         gzip -S .gz.1 -d *
-        sinto barcode -b 12 --barcode_fastq *R1_001.fastq --read1 *R2_001.fastq --read2 *R3_001.fastq --prefix {{rep}}_
-        mv *.barcoded.fastq ..
-        touch done.txt
+        sinto barcode -b 12 --barcode_fastq *R1_001.fastq --read1 *R2_001.fastq --read2 *R3_001.fastq --prefix {wildcards.rep}_
+        pigz -p {threads} *.barcoded.fastq
+        mv *.barcoded.fastq.gz ..
+        rm *.fastq
+        touch {output}
         """
 
 rule cat_fastq:
@@ -64,6 +65,7 @@ rule cat_fastq:
         """
         cat fastq/*R2_001.barcoded.fastq.gz > fastq/read1.fastq.gz
         cat fastq/*R3_001.barcoded.fastq.gz > fastq/read2.fastq.gz
+        rm *R2_001.barcoded.fastq.gz *R3_001.barcoded.fastq.gz
         """
 
 rule map_reads:
