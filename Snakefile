@@ -3,7 +3,7 @@ Process SNARE-seq ATAC data
 Requires bwa-mem, samtools, sinto, pigz, bgzip, and tabix
 """
 
-IDS, = glob_wildcards("replicates/{rep}.txt")
+IND, = glob_wildcards("replicates/{rep}.txt")
 
 
 rule all:
@@ -39,23 +39,25 @@ rule download_attach:
     Compress fastqs (parallel using pigz)
     """
     input:
-        file = expand("replicates/{rep}.txt", rep=IDS)
+        "replicates/{rep}.txt"
     output:
-        dir = directory(expand("fastq/{rep}", rep=IDS))
+        "fastq/{rep}/done.txt"
     threads: 1
     shell:
         """
         mkdir {output}
-        wget -i {input.file} -P {output}
+        wget -i {input} -P {output}
         cd {output}
         gzip -S .gz.1 -d *
         sinto barcode -b 12 --barcode_fastq *R1_001.fastq --read1 *R2_001.fastq --read2 *R3_001.fastq --prefix {{rep}}_
+        mv *.barcoded.fastq ..
+        touch done.txt
         """
 
 rule cat_fastq:
     """Concatenate fastq files from different reps"""
     input:
-        rules.download_attach.output.dir
+        expand("fastq/{rep}/done.txt", rep=IND)
     output:
         "fastq/read1.fastq.gz"
     shell:
