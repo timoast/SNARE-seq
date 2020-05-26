@@ -8,7 +8,6 @@ dependencies:
  - bwa
  - samtools
  - tabix
- - pigz
  - pip
  - pip:
    - sinto>=0.6.1

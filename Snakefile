@@ -1,6 +1,6 @@
 """
 Process SNARE-seq ATAC data
-Requires bwa-mem, samtools, sinto, pigz, bgzip, and tabix
+Requires bwa-mem, samtools, sinto, bgzip, and tabix
 """
 
 IND, = glob_wildcards("replicates/{rep}.txt")
@@ -13,6 +13,7 @@ rule get_genome:
     """Download genome and build bwa index"""
     output:
         "genome/mm10.fa.gz"
+    threads: 1
     shell:
         """
         cd genome
@@ -25,6 +26,7 @@ rule bwa_build:
         "genome/mm10.fa.gz"
     output:
         "genome/mm10.fa"
+    threads: 1
     shell:
         """
         gzip -d genome/mm10.fa.gz
@@ -36,7 +38,6 @@ rule download_attach:
     Download fastq files for each replicate
     Decompress fastq files
     Add barcodes to read 1 and read 2
-    Compress fastqs (parallel using pigz)
     """
     input:
         "replicates/{rep}.txt"
@@ -49,8 +50,7 @@ rule download_attach:
         cd fastq/{wildcards.rep}
         gzip -S .gz.1 -d *
         sinto barcode -b 12 --barcode_fastq *R1_001.fastq --read1 *R2_001.fastq --read2 *R3_001.fastq --prefix {wildcards.rep}_
-        pigz -p {threads} *.barcoded.fastq
-        mv *.barcoded.fastq.gz ..
+        mv *.barcoded.fastq ..
         rm *.fastq
         touch {output}
         """
@@ -61,11 +61,12 @@ rule cat_fastq:
         expand("fastq/{rep}/done.txt", rep=IND)
     output:
         "fastq/read1.fastq.gz"
+    threads: 1
     shell:
         """
-        cat fastq/*R2_001.barcoded.fastq.gz > fastq/read1.fastq.gz
-        cat fastq/*R3_001.barcoded.fastq.gz > fastq/read2.fastq.gz
-        rm *R2_001.barcoded.fastq.gz *R3_001.barcoded.fastq.gz
+        cat fastq/*R2_001.barcoded.fastq > fastq/read1.fastq
+        cat fastq/*R3_001.barcoded.fastq > fastq/read2.fastq
+        rm *R2_001.barcoded.fastq *R3_001.barcoded.fastq
         """
 
 rule map_reads:
