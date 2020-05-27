@@ -52,7 +52,7 @@ rule download_attach:
         sinto barcode -b 12 --barcode_fastq *R1_001.fastq --read1 *R2_001.fastq --read2 *R3_001.fastq --prefix {wildcards.rep}_
         mv *.barcoded.fastq ..
         rm *.fastq
-        touch {output}
+        touch done.txt
         """
 
 rule cat_fastq:
