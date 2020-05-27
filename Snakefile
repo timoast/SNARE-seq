@@ -66,20 +66,20 @@ rule cat_fastq:
         """
         cat fastq/*R2_001.barcoded.fastq > fastq/read1.fastq
         cat fastq/*R3_001.barcoded.fastq > fastq/read2.fastq
-        rm *R2_001.barcoded.fastq *R3_001.barcoded.fastq
+        rm fastq/*R2_001.barcoded.fastq fastq/*R3_001.barcoded.fastq
         """
 
 rule map_reads:
     """Map reads to genome"""
     input:
-        "fastq/read1.fastq",
-        "genome/mm10.fa"
+        read = "fastq/read1.fastq",
+        idx = "genome/mm10.fa"
     output:
         "mapped/aln.bam"
     threads: 8
     shell:
         """
-        bwa mem -t {threads} genome/mm10.fa fastq/read1.barcoded.fastq fastq/read2.barcoded.fastq \
+        bwa mem -t {threads} {input.idx} fastq/read1.fastq fastq/read2.fastq \
             | samtools view -b - > {output}
         """
 
