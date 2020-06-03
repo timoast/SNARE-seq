@@ -10,10 +10,10 @@ rule all:
     input: "mapped/fragments.sort.bed.gz.tbi"
 
 rule get_genome:
-    """Download genome and build bwa index"""
     output:
         "genome/mm10.fa.gz"
     threads: 1
+    message: "Download genome and build bwa index"
     shell:
         """
         cd genome
@@ -21,12 +21,12 @@ rule get_genome:
         """
 
 rule bwa_build:
-    """Build index for bwa mem"""
     input:
         "genome/mm10.fa.gz"
     output:
         "genome/mm10.fa"
     threads: 1
+    message: "Build index for bwa mem"
     shell:
         """
         gzip -d genome/mm10.fa.gz
@@ -34,16 +34,17 @@ rule bwa_build:
         """
 
 rule download_attach:
-    """
-    Download fastq files for each replicate
-    Decompress fastq files
-    Add barcodes to read 1 and read 2
-    """
     input:
         "replicates/{rep}.txt"
     output:
         "fastq/{rep}/done.txt"
     threads: 1
+    message:
+        """
+        Download fastq files for each replicate
+        Decompress fastq files
+        Add barcodes to read 1 and read 2
+        """
     shell:
         """
         wget -i {input} -P fastq/{wildcards.rep}
@@ -56,12 +57,12 @@ rule download_attach:
         """
 
 rule cat_fastq:
-    """Concatenate fastq files from different reps"""
     input:
         expand("fastq/{rep}/done.txt", rep=IND)
     output:
         "fastq/read1.fastq"
     threads: 1
+    message: "Concatenate FASTQ files from different replicates"
     shell:
         """
         cat fastq/*R2_001.barcoded.fastq > fastq/read1.fastq
@@ -70,13 +71,13 @@ rule cat_fastq:
         """
 
 rule map_reads:
-    """Map reads to genome"""
     input:
         read = "fastq/read1.fastq",
         idx = "genome/mm10.fa"
     output:
         "mapped/aln.bam"
     threads: 8
+    message: "Map reads to genome"
     shell:
         """
         bwa mem -t {threads} {input.idx} fastq/read1.fastq fastq/read2.fastq \
@@ -84,12 +85,12 @@ rule map_reads:
         """
 
 rule sort_bam:
-    """Sort and index bam file"""
     input:
         "mapped/aln.bam"
     output:
         "mapped/aln.sort.bam.bai"
     threads: 8
+    message: "Sort and index bam file"
     shell:
         """
         cd mapped
@@ -99,24 +100,24 @@ rule sort_bam:
         """
 
 rule create_fragments:
-    """Create fragment file from BAM file"""
     input:
         "mapped/aln.sort.bam.bai"
     output:
         "mapped/fragments.bed"
     threads: 8
+    message: "Create fragment file from BAM file"
     shell:
         """
         sinto fragments -b mapped/aln.sort.bam -p {threads} -f {output} --barcode_regex "[^:]*"
         """
 
 rule sort_fragments:
-    """Sort and index fragment file"""
     input:
         "mapped/fragments.bed"
     output:
         "mapped/fragments.sort.bed.gz.tbi"
     threads: 8
+    message: "Sort and index fragment file"
     shell:
         """
         sort -k1,1 -k2,2n {input} > mapped/fragments.sort.bed
