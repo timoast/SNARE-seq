@@ -31,3 +31,9 @@ To run the pipeline and generate the outputs, run:
 ```
 snakemake --cores 8
 ```
+
+Note that this involves >500 Gb of raw data.
+
+Overview of the pipeline:
+
+![](./dag.png)

@@ -1,0 +1,3 @@
+https://sra-pub-src-1.s3.amazonaws.com/SRR9672112/SC_20190509L_AdMsBrain_SNARE_chromatin_S27_R1_001.fastq.gz.1
+https://sra-pub-src-1.s3.amazonaws.com/SRR9672112/SC_20190509L_AdMsBrain_SNARE_chromatin_S27_R2_001.fastq.gz.1
+https://sra-pub-src-1.s3.amazonaws.com/SRR9672112/SC_20190509L_AdMsBrain_SNARE_chromatin_S27_R3_001.fastq.gz.1

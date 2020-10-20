@@ -1,18 +1,19 @@
 """
 Process SNARE-seq ATAC data
-Requires bwa-mem, samtools, sinto, pigz, bgzip, and tabix
+Requires bwa-mem, samtools, sinto, bgzip, and tabix
 """
 
-IDS, = glob_wildcards("replicates/{rep}.txt")
+IND, = glob_wildcards("replicates/{rep}.txt")
 
 
 rule all:
     input: "mapped/fragments.sort.bed.gz.tbi"
 
 rule get_genome:
-    """Download genome and build bwa index"""
     output:
         "genome/mm10.fa.gz"
+    threads: 1
+    message: "Download genome and build bwa index"
     shell:
         """
         cd genome
@@ -20,73 +21,76 @@ rule get_genome:
         """
 
 rule bwa_build:
-    """Build index for bwa mem"""
     input:
         "genome/mm10.fa.gz"
     output:
         "genome/mm10.fa"
+    threads: 1
+    message: "Build index for bwa mem"
     shell:
         """
-        gzip -d mm10.fa.gz
-        bwa mem index {input} -p genome/mm10
+        gzip -d genome/mm10.fa.gz
+        bwa index genome/mm10.fa
         """
 
 rule download_attach:
-    """
-    Download fastq files for each replicate
-    Decompress fastq files
-    Add barcodes to read 1 and read 2
-    Compress fastqs (parallel using pigz)
-    """
     input:
-        expand("replicates/{rep}.txt", rep=IDS)
+        "replicates/{rep}.txt"
     output:
-        "fastq/{wildcards.rep}/done.txt"
-    threads: 8
+        "fastq/{rep}/done.txt"
+    threads: 1
+    message:
+        """
+        Download fastq files for each replicate
+        Decompress fastq files
+        Add barcodes to read 1 and read 2
+        """
     shell:
         """
-        mkdir fastq
-        cd fastq
-        wget -i {input}
+        wget -i {input} -P fastq/{wildcards.rep}
+        cd fastq/{wildcards.rep}
         gzip -S .gz.1 -d *
-        sinto barcode -b 12 --barcode_fastq *R1_001.fastq --read1 *R2_001.fastq --read2 *R3_001.fastq --prefix {{rep}}_
-        pigz -p {threads} *.fastq
+        sinto barcode -b 12 --barcode_fastq *R1_001.fastq --read1 *R2_001.fastq --read2 *R3_001.fastq --prefix {wildcards.rep}_
+        mv *.barcoded.fastq ..
+        rm *.fastq
         touch done.txt
         """
 
 rule cat_fastq:
-    """Concatenate fastq files from different reps"""
     input:
-        "fastq/{wildcards.rep}/done.txt"
+        expand("fastq/{rep}/done.txt", rep=IND)
     output:
-        "fastq/read1.fastq.gz"
+        "fastq/read1.fastq"
+    threads: 1
+    message: "Concatenate FASTQ files from different replicates"
     shell:
         """
-        cat fastq/{{rep}}/*R2_001.barcoded.fastq.gz > fastq/read1.fastq.gz
-        cat fastq/{{rep}}/*R3_001.barcoded.fastq.gz > fastq/read2.fastq.gz
+        cat fastq/*R2_001.barcoded.fastq > fastq/read1.fastq
+        cat fastq/*R3_001.barcoded.fastq > fastq/read2.fastq
+        rm fastq/*R2_001.barcoded.fastq fastq/*R3_001.barcoded.fastq
         """
 
 rule map_reads:
-    """Map reads to genome"""
     input:
-        "fastq/read1.fastq.gz",
-        "genome/mm10.fa"
+        read = "fastq/read1.fastq",
+        idx = "genome/mm10.fa"
     output:
         "mapped/aln.bam"
     threads: 8
+    message: "Map reads to genome"
     shell:
         """
-        bwa mem -t {threads} genome/mm10 fastq/read1.barcoded.fastq.gz fastq/read2.barcoded.fastq.gz \
+        bwa mem -t {threads} {input.idx} fastq/read1.fastq fastq/read2.fastq \
             | samtools view -b - > {output}
         """
 
 rule sort_bam:
-    """Sort and index bam file"""
     input:
         "mapped/aln.bam"
     output:
         "mapped/aln.sort.bam.bai"
     threads: 8
+    message: "Sort and index bam file"
     shell:
         """
         cd mapped
@@ -96,24 +100,24 @@ rule sort_bam:
         """
 
 rule create_fragments:
-    """Create fragment file from BAM file"""
     input:
         "mapped/aln.sort.bam.bai"
     output:
         "mapped/fragments.bed"
     threads: 8
+    message: "Create fragment file from BAM file"
     shell:
         """
-        sinto fragments -b mapped/aln.bam -p {threads} -f {output} --barcode_regex "[^:]*"
+        sinto fragments -b mapped/aln.sort.bam -p {threads} -f {output} --barcode_regex "[^:]*"
         """
 
 rule sort_fragments:
-    """Sort and index fragment file"""
     input:
         "mapped/fragments.bed"
     output:
         "mapped/fragments.sort.bed.gz.tbi"
     threads: 8
+    message: "Sort and index fragment file"
     shell:
         """
         sort -k1,1 -k2,2n {input} > mapped/fragments.sort.bed
